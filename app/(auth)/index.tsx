@@ -8,9 +8,7 @@ import {
   KeyboardAvoidingView, 
   Platform, 
   ScrollView,
-  StatusBar,
-  ActivityIndicator,
-  Alert
+  StatusBar
 } from "react-native";
 import { useRouter } from 'expo-router';
 import { useColorScheme } from 'nativewind';
@@ -23,51 +21,45 @@ export default function LoginScreen() {
   
   const [loginID, setLoginID] = useState("");
   const [password, setPassword] = useState("");
+  const [errorMessage, setErrorMessage] = useState(""); // এরর মেসেজের জন্য স্টেট
 
-  // TanStack Query Mutation
   const { mutate, isPending } = useLogin();
-const setAuth = useAuthStore((state) => state.setAuth);
+  const setAuth = useAuthStore((state) => state.setAuth);
+
   const handleLogin = () => {
+    setErrorMessage(""); // নতুন লগইন চেষ্টার আগে এরর ক্লিয়ার করা
+
     if (!loginID || !password) {
-      Alert.alert("Error", "Please enter both ID and Password");
+      setErrorMessage("Please enter both ID and Password");
       return;
     }
-
-
 
     mutate(
       { loginID, password },
       {
         onSuccess: (data) => {
-          // ১. ডেটা যদি স্ট্রিং হিসেবে আসে, তবে তাকে Object-এ কনভার্ট করে নেওয়া
           const responseData = typeof data === 'string' ? JSON.parse(data) : data;
 
-          console.log("Parsed Response:", responseData);
-
-          // ২. চেক করা হচ্ছে টোকেন আসলেই আছে কিনা
           if (responseData && responseData.token) {
-            
-            // ৩. Zustand স্টোরে সেভ করা
             setAuth({
               token: responseData.token,
               user: responseData.user
             });
-
-            console.log("Successfully Saved to Store!");
-
-            // ৪. সফল লগইনের পর নেভিগেশন
             router.replace('/(main)/(tabs)');
-            
           } else {
-             Alert.alert("Login Error", "Invalid response from server (Token missing).");
+            setErrorMessage("Invalid response from server.");
           }
         },
         onError: (error: any) => {
-          Alert.alert("Login Failed", error.message || "Something went wrong");
+          // এরর হ্যান্ডলিং
+          if (error?.response?.status === 401) {
+            setErrorMessage("Invalid Login ID or Password!");
+          } else {
+            setErrorMessage("Something went wrong. Please try again.");
+          }
         }
       }
     );
-
   };
 
   return (
@@ -107,12 +99,21 @@ const setAuth = useAuthStore((state) => state.setAuth);
               Login to MyAmaniya
             </Text>
 
+            {/* Error Message Box */}
+            {errorMessage ? (
+              <View className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 rounded-xl border border-red-200 dark:border-red-800">
+                <Text className="text-red-600 dark:text-red-400 text-center font-bold text-sm">
+                  {errorMessage}
+                </Text>
+              </View>
+            ) : null}
+
             <View className="mb-4">
               <TextInput
                 placeholder="Login ID"
                 placeholderTextColor={colorScheme === 'dark' ? "#475569" : "#94a3b8"}
                 value={loginID}
-                onChangeText={setLoginID}
+                onChangeText={(text) => { setLoginID(text); setErrorMessage(""); }}
                 autoCapitalize="none"
                 className="w-full h-14 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 text-slate-800 dark:text-white font-medium shadow-sm"
               />
@@ -123,7 +124,7 @@ const setAuth = useAuthStore((state) => state.setAuth);
                 placeholder="Password"
                 placeholderTextColor={colorScheme === 'dark' ? "#475569" : "#94a3b8"}
                 value={password}
-                onChangeText={setPassword}
+                onChangeText={(text) => { setPassword(text); setErrorMessage(""); }}
                 secureTextEntry
                 autoCapitalize="none"
                 className="w-full h-14 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl px-5 text-slate-800 dark:text-white font-medium shadow-sm"
@@ -136,15 +137,9 @@ const setAuth = useAuthStore((state) => state.setAuth);
               activeOpacity={0.8}
               className={`w-full h-14 rounded-2xl items-center justify-center shadow-lg shadow-blue-900/30 ${isPending ? 'bg-blue-400' : 'bg-blue-900 dark:bg-blue-600'}`}
             >
-              {isPending ? (
-                <Text className="text-white text-[16px] font-bold tracking-wide">
-                  Login.....
-                </Text>
-              ) : (
-                <Text className="text-white text-[16px] font-bold tracking-wide">
-                  Login
-                </Text>
-              )}
+              <Text className="text-white text-[16px] font-bold tracking-wide">
+                {isPending ? "Logging in..." : "Login"}
+              </Text>
             </TouchableOpacity>
 
             <View className="items-center mt-4">

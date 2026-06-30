@@ -14,7 +14,7 @@ export default function TabsLayout() {
   return (
     <Tabs 
       screenOptions={{ 
-        // headerShown: false,
+        headerShown: false,
         tabBarActiveTintColor: isDark ? '#60a5fa' : '#2563eb',
         tabBarInactiveTintColor: isDark ? '#475569' : '#94a3b8',
         // ট্যাব বার স্বাভাবিক রাখা হয়েছে (কোনো ব্লার বা ট্রান্সপারেন্ট নয়)

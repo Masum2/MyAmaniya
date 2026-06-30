@@ -1,13 +1,15 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuthStore } from '../store/useAuthStore';
 import { getAppointments } from '../api/getAppointmentApi';
+import { Appointment } from '../types/getAppointmentANdClient';
 
-export const useAppointments = (clientId: number | string) => {
+
+export const useAppointments = (clientId?: number | string) => {
   const token = useAuthStore((state) => state.token);
-  return useQuery({
+  
+  return useQuery<Appointment[], Error>({ // এখানে টাইপ ডিফাইন করা হলো
     queryKey: ['appointments', clientId],
-    queryFn: () => getAppointments(clientId, token),
+    queryFn: () => getAppointments(clientId!, token),
     enabled: !!clientId && !!token,
-    staleTime: 0, // ডেটা সাথে সাথে রিফ্রেশ হবে
   });
 };

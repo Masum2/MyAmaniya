@@ -1,31 +1,13 @@
-import { useState, useEffect } from 'react';
+// src/hooks/useGetProviders.ts
+import { useQuery } from '@tanstack/react-query';
 import { getProviders } from '../api/getProvidersApi';
+import { Provider } from '../types/createAppointment';
 
 
 export const useProviders = (token: string | null) => {
-  const [data, setData] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (!token) {
-      console.log("Token is missing");
-      setLoading(false);
-      return;
-    }
-
-    const fetchData = async () => {
-      try {
-        const result = await getProviders(token);
-        setData(result);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [token]);
-
-  return { data, loading };
+  return useQuery<Provider[], Error>({
+    queryKey: ['providers'],
+    queryFn: () => getProviders(token),
+    enabled: !!token,
+  });
 };

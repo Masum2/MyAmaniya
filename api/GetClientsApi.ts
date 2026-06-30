@@ -22,17 +22,3 @@ export const fetchClients = async (token: string | null) => {
   }
 };
 
-export const fetchAppointments = async (clientId: number, token: string | null) => {
-  try {
-    const response = await api.get(`/GetAppointMentList?ClientId=${clientId}`, {
-      headers: { 
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      }
-    });
-    return response.data;
-  } catch (error: any) {
-    console.error("Fetch Appointments Error:", error.response?.data || error.message);
-    throw error;
-  }
-};
