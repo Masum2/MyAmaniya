@@ -1,101 +1,110 @@
 import React from 'react';
-import { Text, View, Pressable, ScrollView } from 'react-native';
+import { Text, View, Pressable, ScrollView, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { useAppointments } from '../../../hooks/useGetAppointments';
+import { useClientList } from '../../../hooks/useClientListData';
+
+const appointmentTypeMap: { [key: number]: string } = {
+  0: "Pending", 1: "Intake", 2: "Assessment", 3: "Individual Therapy",
+  4: "Group Therapy", 5: "Medication Management", 6: "Crisis Visit",
+  7: "FollowUp", 8: "Plan Development", 9: "Administrative",
+  10: "Case Review", 11: "Evaluation", 12: "Screening", 13: "General Counseling",
+};
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
-  const nextAppointment = {
-    id: '1',
-    doctor: 'Dr. Md. Masum Billah',
-    specialty: 'Cardiologist Specialist',
-    date: 'June 28, 2026',
-    time: '10:30 AM',
-    hospital: 'Square Hospital, Room 402'
-  };
+  const { data: clients } = useClientList();
+  const myClient = clients?.find((c: any) => c.description.toLowerCase() === user?.fullName?.toLowerCase());
+  const clientId = myClient?.id;
 
-  const pastAppointments = [
-    { id: '1', doctor: 'Dr. Hasan Mahmud', specialty: 'Dentist', date: 'May 12, 2026', type: 'Checkup' },
-    { id: '2', doctor: 'Dr. Sarah Rahman', specialty: 'Dermatologist', date: 'April 05, 2026', type: 'Follow-up' },
-    { id: '3', doctor: 'Dr. Samiya Kona', specialty: 'General Physician', date: 'March 20, 2026', type: 'Emergency' },
-    { id: '4', doctor: 'Dr. Masum Billah', specialty: 'General Physician', date: 'March 20, 2026', type: 'Completed' },
-  ];
+  const { data: appointments } = useAppointments(clientId);
+
+  const nextAppointment = appointments?.find((a: any) => a.recordType === "Next Appointment");
+  const pastAppointments = appointments?.filter((a: any) => a.recordType === "Past Appointment") || [];
 
   return (
-    <ScrollView className="flex-1 bg-[#f8fafc]" showsVerticalScrollIndicator={false}>
-      <View className="px-5 pt-10 pb-10">
-        
-       
-        
-        {/* ১. New Appointment Button - প্রফেশনাল রাইট সাইড অ্যারো ডিজাইন */}
+    <ScrollView 
+      className="flex-1 bg-[#f8fafc] dark:bg-[#121212]" showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingTop: insets.top + 60 }}
+    >
+      <StatusBar barStyle="dark-content" />
+      
+      <View className="px-5">
+        {/* Header */}
+        <View className="mb-8 mt-4">
+           <Text className="text-2xl font-bold text-slate-800 dark:text-white">Dashboard</Text>
+           <Text className="text-slate-500">Welcome back, {user?.fullName || "User"}</Text>
+        </View>
+
+        {/* New Appointment Button */}
         <Pressable 
-          onPress={() => router.push('/(main)/(tabs)/appointment')}
-          className="w-full bg-blue-900 py-5 px-6 rounded-2xl shadow-lg shadow-blue-900/20 flex-row items-center justify-between mb-10"
+          onPress={() => router.push('/(main)/(tabs)/appointment')} 
+          className="w-full bg-blue-900 py-6 px-6 rounded-3xl flex-row items-center justify-between mb-10 shadow-lg shadow-blue-200"
         >
           <View>
-            <Text className="text-white text-lg font-bold">Book Appointment</Text>
-            <Text className="text-blue-200 text-xs mt-0.5">Schedule your next consultation</Text>
+            <Text className="text-white text-lg font-bold">New Appointment</Text>
+            <Text className="text-blue-200 text-xs mt-1">Schedule your next session</Text>
           </View>
-          <View className="bg-white/20 p-2 rounded-full">
-            <Ionicons name="arrow-forward" size={20} color="white" />
+          <View className="bg-white/20 p-3 rounded-full">
+            <Ionicons name="add" size={24} color="white" />
           </View>
         </Pressable>
 
-        {/* ২. Next Appointment Section */}
+        {/* Next Appointment Section */}
         <View className="mb-8">
-          <Text className="text-lg font-bold text-slate-800 mb-4 tracking-tight">Upcoming Consultation</Text>
-          <View className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100">
-            <View className="flex-row items-center mb-5">
-              <View className="w-12 h-12 bg-blue-50 rounded-2xl items-center justify-center">
-                <Ionicons name="medical" size={24} color="#1e3a8a" />
+          <Text className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Next Appointment</Text>
+          {nextAppointment ? (
+            <View className="bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm">
+              <View className="flex-row items-center mb-4">
+                <View className="w-12 h-12 bg-blue-50 dark:bg-blue-900/30 rounded-2xl items-center justify-center">
+                  <Ionicons name="calendar-outline" size={24} color="#1e3a8a" />
+                </View>
+                <View className="ml-4">
+                  <Text className="text-base font-bold text-slate-900 dark:text-white">
+                    {appointmentTypeMap[nextAppointment.appointmentType] || "Session"}
+                  </Text>
+                </View>
+              </View>
+              <View className="bg-slate-50 dark:bg-slate-800 p-3 rounded-xl">
+                <Text className="text-slate-600 dark:text-slate-300 text-sm">
+                  {new Date(nextAppointment.appointmentDate).toLocaleDateString()} | {new Date(nextAppointment.appointmentTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </Text>
+              </View>
+            </View>
+          ) : (
+            <Text className="text-slate-400">No upcoming appointments.</Text>
+          )}
+        </View>
+
+        {/* Past Appointment Section */}
+     {/* Past Appointment Section */}
+        <View>
+          <Text className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-4">Past Appointments</Text>
+          {pastAppointments.length > 0 ? pastAppointments.map((item: any, index: number) => (
+            <View key={`${item.id}-${index}`} className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex-row items-center mb-3">
+              <View className="bg-slate-100 dark:bg-slate-800 w-12 h-12 rounded-xl items-center justify-center">
+                <Ionicons name="checkmark-circle-outline" size={22} color="#1e3a8a" />
               </View>
               <View className="ml-4 flex-1">
-                <Text className="text-base font-bold text-slate-900">{nextAppointment.doctor}</Text>
-                <Text className="text-xs text-blue-600 font-semibold">{nextAppointment.specialty}</Text>
+                <Text className="text-sm font-bold text-slate-800 dark:text-slate-100">
+                  {appointmentTypeMap[item.appointmentType] || "Session"}
+                </Text>
+                {/* এখানে ডেট এবং টাইম একসাথে দেখানো হচ্ছে */}
+                <Text className="text-xs text-slate-400 mt-0.5">
+                  {new Date(item.appointmentDate).toLocaleDateString()} at {new Date(item.appointmentTime).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                </Text>
+              </View>
+              <View className="bg-blue-50 dark:bg-blue-900/20 px-3 py-1 rounded-full">
+                <Text className="text-[10px] font-bold text-blue-800 dark:text-blue-300 uppercase">Completed</Text>
               </View>
             </View>
-
-            <View className="space-y-3">
-              <View className="flex-row items-center">
-                <Ionicons name="location" size={16} color="#94a3b8" />
-                <Text className="text-slate-600 text-sm ml-3">{nextAppointment.hospital}</Text>
-              </View>
-              <View className="flex-row items-center">
-                <Ionicons name="calendar" size={16} color="#94a3b8" />
-                <Text className="text-slate-600 text-sm ml-3">{nextAppointment.date} | {nextAppointment.time}</Text>
-              </View>
-            </View>
-          </View>
+          )) : <Text className="text-slate-400">No past records.</Text>}
         </View>
-
-        {/* ৩. History Section */}
-        <View>
-          <View className="flex-row justify-between items-center mb-4">
-            <Text className="text-lg font-bold text-slate-800 tracking-tight">Recent History</Text>
-            <Pressable>
-              <Text className="text-sm font-bold text-blue-900">See All</Text>
-            </Pressable>
-          </View>
-          
-          <View>
-            {pastAppointments.map((item) => (
-              <View key={item.id} className="bg-white p-4 rounded-2xl border border-slate-100 flex-row items-center mb-3">
-                <View className="bg-slate-100 w-12 h-12 rounded-xl items-center justify-center">
-                  <Ionicons name="document-text" size={20} color="#64748b" />
-                </View>
-                <View className="ml-4 flex-1">
-                  <Text className="text-sm font-bold text-slate-800">{item.doctor}</Text>
-                  <Text className="text-xs text-slate-400 mt-0.5">{item.specialty} • {item.date}</Text>
-                </View>
-                <View className="bg-emerald-50 px-3 py-1 rounded-lg">
-                  <Text className="text-[10px] font-bold text-emerald-600 uppercase">{item.type}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
       </View>
     </ScrollView>
   );

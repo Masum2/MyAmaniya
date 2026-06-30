@@ -1,300 +1,169 @@
 import React, { useState } from 'react';
 import { 
-  Text, 
-  View, 
-  Pressable, 
-  ScrollView, 
-  TextInput, 
-  KeyboardAvoidingView, 
-  Platform,
-  Modal,
-  FlatList
+  Text, View, Pressable, ScrollView, TextInput, KeyboardAvoidingView, 
+  Platform, Modal, FlatList, useColorScheme, StyleSheet 
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import DateTimePicker from '@react-native-community/datetimepicker';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useClientList } from '../../../hooks/useClientListData';
+import { useProviders } from '../../../hooks/useGetProviders';
+import { useAuthStore } from '../../../store/useAuthStore';
+import { useAddNewAppointment } from '../../../hooks/useCreateNewAppointment';
 
 export default function AppointmentTab() {
   const router = useRouter();
+  const colorScheme = useColorScheme();
+  const isDark = colorScheme === 'dark';
+  const insets = useSafeAreaInsets();
 
-  // ফর্ম স্টেটসমূহ
+  // --- স্টেটসমূহ ---
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [startDate, setStartDate] = useState(new Date());
   const [startTime, setStartTime] = useState(new Date());
   const [endTime, setEndTime] = useState(new Date());
-  
-  const [provider, setProvider] = useState('Select Provider');
-  const [client, setClient] = useState('Select Client');
-  const [type, setType] = useState('Select Type');
-  const [method, setMethod] = useState('Select Method');
-  const [status, setStatus] = useState('Scheduled');
 
-  // পিকার ও মোডাল শো করার স্টেটসমূহ
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showStartTimePicker, setShowStartTimePicker] = useState(false);
   const [showEndTimePicker, setShowEndTimePicker] = useState(false);
-  
+
+  const [provider, setProvider] = useState({ label: 'Select Provider', id: 3 });
+  const [client, setClient] = useState({ label: 'Select Client', id: 3 });
+  const [type, setType] = useState({ label: 'Select Type', index: 3 });
+  const [method, setMethod] = useState({ label: 'Select Method', index: 1 });
+  const [status, setStatus] = useState({ label: 'Scheduled', index: 1 });
+
   const [modalVisible, setModalVisible] = useState(false);
   const [modalTitle, setModalTitle] = useState('');
-  const [modalData, setModalData] = useState<string[]>([]);
+  const [modalData, setModalData] = useState<any[]>([]);
   const [activeSelectType, setActiveSelectType] = useState('');
 
-  // ড্রপডাউন লিস্টের ডামি ডাটাসমূহ
-  const providersList = ['Dr. Md. Masum Billah', 'Dr. Hasan Mahmud', 'Dr. Sarah Rahman', 'Dr. Amit Das'];
-  const clientsList = ['John Doe', 'Rahim Uddin', 'Karim Sheikh', 'Emily Watson'];
-  const appointmentTypesList = ['General Checkup', 'Follow-up Consultation', 'Emergency', 'Dental Treatment', 'Therapy Session'];
-  const contactMethodsList = ['In-Person (Hospital)', 'Video Consultation', 'Audio Call', 'Home Visit'];
-  const statusList = ['Scheduled', 'Pending', 'In Progress', 'Completed', 'Canceled'];
+  // --- হুক এবং ডাটা ---
+  const { token } = useAuthStore();
+  const { data: clients } = useClientList();
+  const { data: providersList } = useProviders(token);
+  const { saveAppointment } = useAddNewAppointment();
 
-  // ডেট ও টাইম ফরম্যাটার
-  const formatDate = (date: Date) => `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
-  const formatTime = (time: Date) => {
-    let hours = time.getHours();
-    let minutes: string | number = time.getMinutes();
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12; // 0 কে 12 বানাবে
-    minutes = minutes < 10 ? '0' + minutes : minutes;
-    return `${hours}:${minutes} ${ampm}`;
+  const appointmentTypesList = ['Pending', 'Intake', 'Assessment', 'Individual Therapy', 'Group Therapy', 'Medication Management', 'Crisis Visit', 'FollowUp', 'Plan Development', 'Administrative', 'Case Review', 'Evaluation', 'Screening', 'General Counseling'];
+  const contactMethodsList = ['Face to Face', 'Phone Call', 'Telehealth', 'Not Applicable', 'Text/Email'];
+  const statusList = ['Waiting', 'Scheduled', 'Attended', 'No Show', 'Client Cancelled', 'Rescheduled By Client', 'Rescheduled By Staff', 'Staff Cancelled', 'Not Applicable'];
+
+  const handleSave = async () => {
+    const payload = {
+      startDate: startDate.toISOString(),
+      startDateTime: startTime.toISOString(),
+      endDateTime: endTime.toISOString(),
+      appUserId: provider.id,
+      clientId: client.id,
+      title: title,
+      description: description,
+      appointmentType: type.index,
+      contactMethod: method.index,
+      appointmentStatus: status.index,
+      createdBy: "Kona_Supervisor",
+      createdOn: new Date().toISOString(),
+      recordedBy: "Kona_Supervisor",
+      recordedOn: new Date().toISOString()
+    };
+
+    const result = await saveAppointment(payload);
+    if (result.success) {
+      alert('Appointment Saved Successfully!');
+      router.back();
+    } else {
+      alert('Failed to save appointment.');
+    }
   };
 
-  // ড্রপডাউন মোডাল ওপেন করার ফাংশন
-  const openDropdown = (title: string, data: string[], typeKey: string) => {
-    setModalTitle(title);
-    setModalData(data);
-    setActiveSelectType(typeKey);
-    setModalVisible(true);
-  };
-
-  // ড্রপডাউন থেকে আইটেম সিলেক্ট করার ফাংশন
-  const handleSelectValue = (value: string) => {
-    if (activeSelectType === 'provider') setProvider(value);
-    if (activeSelectType === 'client') setClient(value);
-    if (activeSelectType === 'type') setType(value);
-    if (activeSelectType === 'method') setMethod(value);
-    if (activeSelectType === 'status') setStatus(value);
+  const handleSelectValue = (item: any, index: number) => {
+    if (activeSelectType === 'provider') setProvider({ label: item.displayName, id: item.id });
+    else if (activeSelectType === 'client') setClient({ label: item.description, id: item.id });
+    else if (activeSelectType === 'type') setType({ label: item, index: index });
+    else if (activeSelectType === 'method') setMethod({ label: item, index: index + 1 });
+    else if (activeSelectType === 'status') setStatus({ label: item, index: index });
     setModalVisible(false);
   };
 
-  const handleSave = () => {
-    if (!title.trim()) {
-      alert('Please enter an appointment title');
-      return;
-    }
-    alert('Appointment Saved Successfully!');
-    router.back();
-  };
-
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
-      className="flex-1 bg-[#f8fafc]"
-    >
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
-        <View className="px-5 pt-5 pb-10">
-          
-          <View className="mb-6">
-            <Text className="text-xl font-black text-slate-800">Create New Appointment</Text>
-            <Text className="text-xs font-medium text-slate-400 mt-0.5">Fill up with proper info</Text>
-          </View>
+    <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1 bg-[#f8fafc] dark:bg-[#121212]">
+      <ScrollView showsVerticalScrollIndicator={false}
 
-          {/* Title Input */}
-          <View className="mb-4">
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Appointment Title</Text>
-            <View className="flex-row items-center bg-white px-4 rounded-xl border border-slate-100 shadow-sm">
-              <Ionicons name="bookmark-outline" size={18} color="#64748b" />
-              <TextInput
-                placeholder="e.g., General Consultation"
-                value={title}
-                onChangeText={setTitle}
-                className="flex-1 text-sm text-slate-800 py-3.5 ml-2.5 font-medium"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-          </View>
+        contentContainerStyle={{ paddingTop: insets.top + 60, paddingBottom: 100, paddingHorizontal: 20 }}>
+        <Text className="text-xl font-black text-slate-800 dark:text-white mb-6">Create New Appointment</Text>
 
-          {/* Start Date Picker */}
-          <View className="mb-4">
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Start Date</Text>
-            <Pressable 
-              onPress={() => setShowDatePicker(true)}
-              className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm active:bg-slate-50"
-            >
-              <View className="flex-row items-center">
-                <Ionicons name="calendar-outline" size={18} color="#64748b" />
-                <Text className="text-sm ml-2.5 text-slate-800 font-medium">{formatDate(startDate)}</Text>
-              </View>
-              <Ionicons name="chevron-down" size={16} color="#94a3b8" />
+        {/* --- ডেট ও টাইম পিকচার --- */}
+        <View className="mb-4">
+          <Text className="text-xs font-bold text-slate-500 mb-2 uppercase">Date & Time</Text>
+          <Pressable onPress={() => setShowDatePicker(true)} className="bg-white dark:bg-slate-800 p-4 rounded-xl mb-2 border border-slate-200 dark:border-slate-700">
+            <Text className="text-slate-800 dark:text-white">Date: {startDate.toDateString()}</Text>
+          </Pressable>
+          <View className="flex-row gap-2">
+            <Pressable onPress={() => setShowStartTimePicker(true)} className="flex-1 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+              <Text className="text-slate-800 dark:text-white">Start: {startTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
+            </Pressable>
+            <Pressable onPress={() => setShowEndTimePicker(true)} className="flex-1 bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+              <Text className="text-slate-800 dark:text-white">End: {endTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</Text>
             </Pressable>
           </View>
-
-          {showDatePicker && (
-            <DateTimePicker
-              value={startDate}
-              mode="date"
-              display={Platform.OS === 'ios' ? 'spinner' : 'default'}
-              onChange={(event, selectedDate) => {
-                setShowDatePicker(false);
-                if (selectedDate) setStartDate(selectedDate);
-              }}
-            />
-          )}
-
-          {/* Time Pickers Row */}
-          <View className="flex-row mb-1">
-            {/* Start Time */}
-            <View className="flex-1 mr-2">
-              <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Start Time</Text>
-              <Pressable 
-                onPress={() => setShowStartTimePicker(true)}
-                className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm active:bg-slate-50"
-              >
-                <View className="flex-row items-center">
-                  <Ionicons name="time-outline" size={18} color="#64748b" />
-                  <Text className="text-sm ml-2 text-slate-800 font-medium">{formatTime(startTime)}</Text>
-                </View>
-              </Pressable>
-            </View>
-
-            {showStartTimePicker && (
-              <DateTimePicker
-                value={startTime}
-                mode="time"
-                is24Hour={false}
-                display="default"
-                onChange={(event, selectedTime) => {
-                  setShowStartTimePicker(false);
-                  if (selectedTime) setStartTime(selectedTime);
-                }}
-              />
-            )}
-
-            {/* End Time */}
-            <View className="flex-1">
-              <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">End Time</Text>
-              <Pressable 
-                onPress={() => setShowEndTimePicker(true)}
-                className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm active:bg-slate-50"
-              >
-                <View className="flex-row items-center">
-                  <Ionicons name="time-outline" size={18} color="#64748b" />
-                  <Text className="text-sm ml-2 text-slate-800 font-medium">{formatTime(endTime)}</Text>
-                </View>
-              </Pressable>
-            </View>
-
-            {showEndTimePicker && (
-              <DateTimePicker
-                value={endTime}
-                mode="time"
-                is24Hour={false}
-                display="default"
-                onChange={(event, selectedTime) => {
-                  setShowEndTimePicker(false);
-                  if (selectedTime) setEndTime(selectedTime);
-                }}
-              />
-            )}
-          </View>
-
-          {/* Dynamic Dropdown Selectors */}
-          <View className="mt-3">
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Provider / Doctor</Text>
-            <Pressable onPress={() => openDropdown('Select Provider', providersList, 'provider')} className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm mb-4">
-              <Text className={`text-sm ${provider.includes('Select') ? 'text-slate-400' : 'text-slate-800 font-medium'}`}>{provider}</Text>
-              <Ionicons name="chevron-down" size={16} color="#94a3b8" />
-            </Pressable>
-
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Client / Patient</Text>
-            <Pressable onPress={() => openDropdown('Select Client', clientsList, 'client')} className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm mb-4">
-              <Text className={`text-sm ${client.includes('Select') ? 'text-slate-400' : 'text-slate-800 font-medium'}`}>{client}</Text>
-              <Ionicons name="chevron-down" size={16} color="#94a3b8" />
-            </Pressable>
-
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Appointment Type</Text>
-            <Pressable onPress={() => openDropdown('Select Appointment Type', appointmentTypesList, 'type')} className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm mb-4">
-              <Text className={`text-sm ${type.includes('Select') ? 'text-slate-400' : 'text-slate-800 font-medium'}`}>{type}</Text>
-              <Ionicons name="chevron-down" size={16} color="#94a3b8" />
-            </Pressable>
-
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Contact Method</Text>
-            <Pressable onPress={() => openDropdown('Select Contact Method', contactMethodsList, 'method')} className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm mb-4">
-              <Text className={`text-sm ${method.includes('Select') ? 'text-slate-400' : 'text-slate-800 font-medium'}`}>{method}</Text>
-              <Ionicons name="chevron-down" size={16} color="#94a3b8" />
-            </Pressable>
-
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Appointment Status</Text>
-            <Pressable onPress={() => openDropdown('Select Appointment Status', statusList, 'status')} className="flex-row items-center justify-between bg-white px-4 py-3.5 rounded-xl border border-slate-100 shadow-sm mb-6">
-              <Text className="text-sm text-slate-800 font-medium">{status}</Text>
-              <Ionicons name="chevron-down" size={16} color="#94a3b8" />
-            </Pressable>
-          </View>
-
-          {/* Description Field */}
-          <View className="mb-8">
-            <Text className="text-xs font-bold text-slate-500 mb-1.5 uppercase tracking-wider">Description / Notes</Text>
-            <View className="bg-white px-4 py-3 rounded-xl border border-slate-100 shadow-sm">
-              <TextInput
-                placeholder="Add medical notes or symptoms..."
-                value={description}
-                onChangeText={setDescription}
-                multiline
-                numberOfLines={4}
-                textAlignVertical="top"
-                className="text-sm text-slate-800 font-medium h-24"
-                placeholderTextColor="#94a3b8"
-              />
-            </View>
-          </View>
-
-          {/* Action Buttons */}
-          <View className="flex-row space-x-4 items-center">
-            <Pressable onPress={() => router.back()} className="flex-1 bg-slate-100 active:bg-slate-200 py-4 rounded-xl items-center mr-3">
-              <Text className="text-slate-600 font-bold text-sm">Cancel</Text>
-            </Pressable>
-            <Pressable onPress={handleSave} className="flex-2 bg-blue-600 active:bg-blue-700 py-4 rounded-xl items-center flex-row justify-center px-8 flex-grow">
-              <Text className="text-white font-bold text-sm">Save Appointment</Text>
-            </Pressable>
-          </View>
-
         </View>
+
+        {/* ডেটপিকার মডাল লজিক */}
+        {showDatePicker && <DateTimePicker value={startDate} mode="date" onChange={(e, d) => {setShowDatePicker(false); if(d) setStartDate(d)}} />}
+        {showStartTimePicker && <DateTimePicker value={startTime} mode="time" onChange={(e, t) => {setShowStartTimePicker(false); if(t) setStartTime(t)}} />}
+        {showEndTimePicker && <DateTimePicker value={endTime} mode="time" onChange={(e, t) => {setShowEndTimePicker(false); if(t) setEndTime(t)}} />}
+
+        {/* --- ইনপুট ফিল্ডস --- */}
+        <View className="mb-4">
+          <Text className="text-xs font-bold text-slate-500 mb-1 uppercase">Title</Text>
+          <TextInput placeholder="Appointment Title" value={title} onChangeText={setTitle} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white" />
+        </View>
+
+        <View className="mb-4">
+          <Text className="text-xs font-bold text-slate-500 mb-1 uppercase">Description</Text>
+          <TextInput placeholder="Add notes..." value={description} onChangeText={setDescription} multiline numberOfLines={4} className="bg-white dark:bg-slate-800 p-4 rounded-xl border border-slate-200 dark:border-slate-700 h-24 text-slate-800 dark:text-white" />
+        </View>
+
+        {/* --- ড্রপডাউন বাটনসমূহ --- */}
+        {[
+          { label: 'Provider', value: provider.label, key: 'provider' },
+          { label: 'Client', value: client.label, key: 'client' },
+          { label: 'Type', value: type.label, key: 'type' },
+          { label: 'Method', value: method.label, key: 'method' },
+          { label: 'Status', value: status.label, key: 'status' }
+        ].map((item, idx) => (
+          <Pressable key={idx} onPress={() => {
+            let data = item.key === 'provider' ? providersList : item.key === 'client' ? clients : item.key === 'type' ? appointmentTypesList : item.key === 'method' ? contactMethodsList : statusList;
+            setModalTitle(item.label);
+            setModalData(data || []);
+            setActiveSelectType(item.key);
+            setModalVisible(true);
+          }} className="bg-white dark:bg-slate-800 p-4 mb-4 rounded-xl border border-slate-200 dark:border-slate-700 flex-row justify-between">
+            <Text className="text-slate-800 dark:text-white">{item.value}</Text>
+            <Ionicons name="chevron-down" size={20} color="#94a3b8" />
+          </Pressable>
+        ))}
+
+        <Pressable onPress={handleSave} className="bg-blue-600 p-4 rounded-xl items-center mt-4">
+          <Text className="text-white font-bold uppercase">Save Appointment</Text>
+        </Pressable>
       </ScrollView>
 
-      {/* Smart Bottom Sheet Dropdown Modal */}
-      <Modal
-        animationType="slide"
-        transparent={true}
-        visible={modalVisible}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View className="flex-1 justify-end bg-black/40">
-          <View className="bg-white rounded-t-3xl max-h-[50%] p-5">
-            <View className="flex-row justify-between items-center pb-4 border-b border-slate-100 mb-2">
-              <Text className="text-base font-bold text-slate-800">{modalTitle}</Text>
-              <Pressable onPress={() => setModalVisible(false)} className="p-1">
-                <Ionicons name="close" size={22} color="#64748b" />
+      {/* --- মডাল --- */}
+      <Modal visible={modalVisible} transparent={true} animationType="slide">
+        <Pressable style={StyleSheet.absoluteFill} className="bg-black/50" onPress={() => setModalVisible(false)} />
+        <View className="absolute bottom-0 w-full bg-white dark:bg-slate-900 rounded-t-3xl max-h-[50%] p-5">
+          <FlatList
+            data={modalData}
+            renderItem={({ item, index }) => (
+              <Pressable onPress={() => handleSelectValue(item, index)} className="py-4 border-b border-slate-100">
+                <Text className="text-slate-800 dark:text-white">
+                  {activeSelectType === 'provider' ? item.displayName : activeSelectType === 'client' ? item.description : item}
+                </Text>
               </Pressable>
-            </View>
-            
-            <FlatList
-              data={modalData}
-              keyExtractor={(item) => item}
-              showsVerticalScrollIndicator={false}
-              renderItem={({ item }) => (
-                <Pressable 
-                  onPress={() => handleSelectValue(item)}
-                  className="py-4 border-b border-slate-50 active:bg-slate-50 px-2 flex-row justify-between items-center"
-                >
-                  <Text className="text-sm text-slate-700 font-medium">{item}</Text>
-                  {/* যদি আগে থেকে সিলেক্ট করা থাকে তবে টিক মার্ক দেখাবে */}
-                  {(provider === item || client === item || type === item || method === item || status === item) && (
-                    <Ionicons name="checkmark-sharp" size={18} color="#2563eb" />
-                  )}
-                </Pressable>
-              )}
-            />
-          </View>
+            )}
+          />
         </View>
       </Modal>
     </KeyboardAvoidingView>

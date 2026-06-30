@@ -1,14 +1,18 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  // NOTE: app ফোল্ডার এবং src ফোল্ডারের সব ফাইল এখানে যুক্ত করা হয়েছে
-  content: [
-    "./App.tsx",
-    "./app/**/*.{js,jsx,ts,tsx}",
-    "./src/**/*.{js,jsx,ts,tsx}" 
-  ],
+  darkMode: 'class', 
+content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
   presets: [require("nativewind/preset")],
   theme: {
-    extend: {},
+    extend: {
+      colors: {
+        primary: "#3b82f6",
+        background: {
+          light: "#ffffff",
+          dark: "#121212",
+        },
+      },
+    },
   },
   plugins: [],
 }

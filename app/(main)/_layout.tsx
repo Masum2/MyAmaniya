@@ -6,10 +6,11 @@ import {
   DrawerItem,
 } from '@react-navigation/drawer';
 import { useRouter } from 'expo-router';
+import { useAuthStore } from '../../store/useAuthStore';
 
 function CustomDrawerContent(props: any) {
   const router = useRouter();
-
+ const {  logout } = useAuthStore();
   return (
     <DrawerContentScrollView {...props}>
       {/* Default Drawer Items */}
@@ -53,7 +54,11 @@ function CustomDrawerContent(props: any) {
             color="#ef4444"
           />
         )}
-        onPress={() => router.replace('/(auth)')}
+        // onPress={() => router.replace('/(auth)')}
+        onPress={() => {
+  logout();
+  router.replace('/(auth)');
+}}
       />
     </DrawerContentScrollView>
   );

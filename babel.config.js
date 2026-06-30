@@ -6,7 +6,7 @@ module.exports = function (api) {
       "nativewind/babel",
     ],
     plugins: [
-      'react-native-reanimated/plugin', // <-- এই লাইনটি অবশ্যই থাকতে হবে এবং এটি সবার নিচে থাকবে
+      'react-native-reanimated/plugin',
     ],
   };
 };

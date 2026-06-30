@@ -1,13 +1,36 @@
+import { useEffect } from 'react';
 import { Stack } from 'expo-router';
-import React from 'react';
+import { View, Appearance } from 'react-native';
+import { useColorScheme } from 'nativewind';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query'; // ইমপোর্ট করা হলো
 import '../global.css';
 
+// QueryClient টি এখানে বাইরে তৈরি করুন
+const queryClient = new QueryClient();
+
 export default function RootLayout() {
+  const { colorScheme, setColorScheme } = useColorScheme();
+
+  useEffect(() => {
+    const systemTheme = Appearance.getColorScheme();
+    setColorScheme(systemTheme || 'light');
+
+    const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+      setColorScheme(colorScheme || 'light');
+    });
+
+    return () => subscription.remove();
+  }, []);
+
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      {/* (auth)/index কে সরাসরি মেইন এন্ট্রি হিসেবে পয়েন্ট করা */}
-      <Stack.Screen name="(auth)/index" /> 
-      <Stack.Screen name="(main)" />
-    </Stack>
+    // QueryClientProvider দিয়ে পুরো অ্যাপটিকে র‍্যাপ করে দিন
+    <QueryClientProvider client={queryClient}>
+      <View className={colorScheme === 'dark' ? 'dark' : ''} style={{ flex: 1 }}>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(auth)/index" /> 
+          <Stack.Screen name="(main)" />
+        </Stack>
+      </View>
+    </QueryClientProvider>
   );
 }

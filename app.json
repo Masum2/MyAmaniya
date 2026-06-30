@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "MyAmaniyaNew",
-    "slug": "MyAmaniyaNew",
+    "name": "MyAmaniya",
+    "slug": "MyAmaniya",
     "scheme": "my-amaniyah-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -20,6 +20,9 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
+      },
+      "config": {
+        "usesCleartextTraffic": true
       },
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
