@@ -1,60 +1,231 @@
 import React from 'react';
-import { View, Text, ScrollView, StatusBar, Pressable } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
-import CustomHeader from '../../../components/CustomHeader';
+import {
+  View,
+  Text,
+  ScrollView,
+  StatusBar,
+  Dimensions,
+  ActivityIndicator,
+} from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useTreatmentDetails } from '../../../hooks/useTreatmentProgress';
+import { PieChart } from 'react-native-chart-kit';
+import { useColorScheme } from 'nativewind';
+import CustomHeader from '../../../components/CustomHeader';
+
+import { useClientList } from '../../../hooks/useClientListData';
+import { useTreatmentData } from '../../../hooks/useTreatmentProgress';
+import { useAuthStore } from '../../../store/useAuthStore';
+
+const screenWidth = Dimensions.get('window').width;
 
 export default function TreatmentTab() {
-  const { data, isLoading } = useTreatmentDetails();
+  const { colorScheme } = useColorScheme();
+  const isDarkMode = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
+  const { token } = useAuthStore();
 
-  if (isLoading) return <View className="flex-1 justify-center items-center"><Text>Loading...</Text></View>;
+  const { data: clients } = useClientList();
+
+  const clientId =
+    Array.isArray(clients) && clients.length > 0 ? clients[0].id : null;
+
+  console.log('First Client ID:', clientId);
+
+  const {
+    data: treatmentData,
+    isLoading,
+    error,
+  } = useTreatmentData(2, token);
+
+  const textColor = isDarkMode ? '#FFFFFF' : '#1e293b';
+  const cardBg = isDarkMode ? '#1e293e' : '#FFFFFF';
+  const summaryBg = isDarkMode ? '#0f172a' : '#1e293b';
+
+  const chartConfig = {
+    color: (opacity = 1) =>
+      isDarkMode
+        ? `rgba(255,255,255,${opacity})`
+        : `rgba(0,0,0,${opacity})`,
+    strokeWidth: 2,
+  };
+
+  // Status wise colors
+  const getColor = (status: string) => {
+    switch (status?.toLowerCase()) {
+      case 'discontinued':
+        return '#3b82f6'; // Blue
+
+      case 'on hold':
+        return '#3b82f6'; // Blue
+
+      case 'in progress':
+        return '#ff5c8a'; // Pink
+
+      case 'accomplished':
+        return '#4ecdc4'; // Teal
+
+      case 'successfully completed':
+        return '#4ecdc4'; // Teal
+
+      case 'unsuccessful':
+        return '#ffd166'; // Yellow
+
+      default:
+        return '#9ca3af'; // Gray
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-slate-100 dark:bg-[#121212]">
+        <ActivityIndicator size="large" color="#2563eb" />
+      </View>
+    );
+  }
+
+  if (!treatmentData || error) {
+    return (
+      <View className="flex-1 justify-center items-center bg-slate-100 dark:bg-[#121212]">
+        <Text style={{ color: textColor }}>
+          No data available or error occurred.
+        </Text>
+      </View>
+    );
+  }
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-[#121212]">
-      <StatusBar barStyle="light-content" />
-      <CustomHeader title="Treatment Details" />
+    <View className="flex-1 bg-slate-100 dark:bg-[#121212]">
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+      />
 
-      <ScrollView 
-        contentContainerStyle={{ paddingTop: insets.top + 90, padding: 20 }}
-        showsVerticalScrollIndicator={false}
+      <CustomHeader title="Treatment Plans" />
+
+      <ScrollView
+        contentContainerStyle={{
+          paddingTop: insets.top + 90,
+          padding: 20,
+        }}
       >
-        {/* Plan Header */}
-        <View className="mb-8">
-          <Text className="text-sm font-bold text-blue-600 dark:text-blue-400 uppercase tracking-widest">Active Plan</Text>
-          <Text className="text-2xl font-bold text-slate-800 dark:text-white mt-1">{data?.planName}</Text>
+        {/* Goal Distribution */}
+        <View
+          style={{ backgroundColor: cardBg }}
+          className="p-5 rounded-3xl mb-6 shadow-sm border border-slate-200 dark:border-slate-700"
+        >
+          <Text
+            style={{ color: textColor }}
+            className="text-base font-bold mb-4 text-center"
+          >
+            Goal Outcome Distribution
+          </Text>
+
+          <PieChart
+            data={
+              treatmentData.goalOutcomeChartData?.map((item: any) => ({
+                name: item.category,
+                population: item.value,
+                color: getColor(item.category),
+                legendFontColor: isDarkMode
+                  ? '#cbd5e1'
+                  : '#334155',
+                legendFontSize: 13,
+              })) || []
+            }
+            width={screenWidth - 70}
+            height={220}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="0"
+            absolute
+            chartConfig={chartConfig}
+          />
         </View>
 
-        {/* Goals Section */}
-        <Text className="text-lg font-bold text-slate-800 dark:text-white mb-4">🎯 Treatment Goals</Text>
-        {data?.goals.map((g) => (
-          <View key={g.id} className="bg-white dark:bg-slate-800 p-5 rounded-3xl mb-4 border border-slate-100 dark:border-slate-700 shadow-sm">
-            <View className="flex-row items-center mb-3">
-              <View className="w-10 h-10 rounded-full bg-blue-50 dark:bg-blue-900/30 items-center justify-center mr-3">
-                <Ionicons name="flag" size={18} color="#2563eb" />
-              </View>
-              <Text className="text-base font-bold text-slate-800 dark:text-white flex-1">{g.goal}</Text>
-            </View>
-            <View className="flex-row justify-between bg-slate-50 dark:bg-slate-900/50 p-3 rounded-xl">
-              <Text className="text-xs font-bold text-slate-500">TARGET: {g.targetDate}</Text>
-              <Text className="text-xs font-bold text-blue-600 dark:text-blue-400">{g.outcome}</Text>
-            </View>
-          </View>
-        ))}
+        {/* Activity Distribution */}
+        <View
+          style={{ backgroundColor: cardBg }}
+          className="p-5 rounded-3xl mb-6 shadow-sm border border-slate-200 dark:border-slate-700"
+        >
+          <Text
+            style={{ color: textColor }}
+            className="text-base font-bold mb-4 text-center"
+          >
+            Activity Outcome Distribution
+          </Text>
 
-        {/* Progress Notes Section */}
-        <Text className="text-lg font-bold text-slate-800 dark:text-white mb-4 mt-4">📝 Progress Notes</Text>
-        {data?.notes.map((n) => (
-          <View key={n.id} className="bg-white dark:bg-slate-800 p-5 rounded-3xl mb-3 border-l-4 border-l-blue-500 shadow-sm">
-            <View className="flex-row justify-between mb-2">
-              <Text className="text-xs font-bold text-blue-500">{n.date}</Text>
-              <Text className="text-xs font-bold text-slate-400">CPT: {n.cptCode}</Text>
-            </View>
-            <Text className="text-base font-semibold text-slate-800 dark:text-white">{n.intervention}</Text>
-            <Text className="text-sm text-slate-500 dark:text-slate-400 mt-1">{n.modality}</Text>
-          </View>
-        ))}
+          <PieChart
+            data={
+              treatmentData.activityOutcomeChartData?.map(
+                (item: any) => ({
+                  name: item.category,
+                  population: item.value,
+                  color: getColor(item.category),
+                  legendFontColor: isDarkMode
+                    ? '#cbd5e1'
+                    : '#334155',
+                  legendFontSize: 13,
+                }),
+              ) || []
+            }
+            width={screenWidth - 70}
+            height={220}
+            accessor="population"
+            backgroundColor="transparent"
+            paddingLeft="0"
+            absolute
+            chartConfig={chartConfig}
+          />
+        </View>
+
+        {/* Summary */}
+        <View className="mb-8">
+          {treatmentData.statusSummary?.map(
+            (sum: any, index: number) => (
+              <View
+                key={index}
+                style={{ backgroundColor: summaryBg }}
+                className="p-6 rounded-3xl mb-5 shadow-lg"
+              >
+                <View className="flex-row items-center justify-between mb-5">
+                  <Text className="text-lg font-bold text-white">
+                    📊 {sum.type}
+                  </Text>
+
+                  <Text className="text-slate-300">
+                    Total: {sum.total}
+                  </Text>
+                </View>
+
+                <View className="flex-row flex-wrap justify-between">
+                  {Object.entries(sum.statusCounts || {}).map(
+                    ([status, count]: any) => (
+                      <View
+                        key={status}
+                        className="w-[48%] rounded-2xl p-4 mb-3"
+                        style={{
+                          backgroundColor: `${getColor(status)}20`,
+                          borderWidth: 1,
+                          borderColor: getColor(status),
+                        }}
+                      >
+                        <Text
+                          style={{ color: getColor(status) }}
+                          className="text-xs font-bold uppercase"
+                        >
+                          {status}
+                        </Text>
+
+                        <Text className="text-white text-2xl font-bold mt-2">
+                          {count}
+                        </Text>
+                      </View>
+                    ),
+                  )}
+                </View>
+              </View>
+            ),
+          )}
+        </View>
       </ScrollView>
     </View>
   );

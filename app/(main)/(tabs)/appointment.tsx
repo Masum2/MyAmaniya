@@ -182,7 +182,7 @@ export default function AppointmentTab() {
           </Pressable>
         </View>
 
-        <Pressable onPress={handleSave} className="bg-blue-500 p-4 rounded-2xl items-center shadow-lg shadow-blue-500/30">
+        <Pressable onPress={handleSave} className="bg-blue-900 p-4 rounded-2xl items-center shadow-lg shadow-blue-500/30">
           <Text className="text-white font-bold text-base">Schedule Appointment</Text>
         </Pressable>
       </ScrollView>
