@@ -1,10 +1,11 @@
 import axios from 'axios';
+import Constants from 'expo-constants';
 
-const BASE_URL = "http://192.168.0.100:5294/beratenApi/ClientApp";
 
-// Axios Instance তৈরি করুন যাতে বারবার হেডার না লিখতে হয়
+const API_URL = `${Constants.expoConfig?.extra?.apiUrl}/beratenApi/ClientApp`;
+
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_URL,
 });
 
 export const fetchClients = async (token: string | null) => {
@@ -15,7 +16,7 @@ export const fetchClients = async (token: string | null) => {
         'Content-Type': 'application/json' 
       }
     });
-    return response.data; // Axios অটোমেটিক JSON পার্স করে
+    return response.data; 
   } catch (error: any) {
     console.error("Fetch Clients Error:", error.response?.data || error.message);
     throw error;

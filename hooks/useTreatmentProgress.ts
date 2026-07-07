@@ -5,7 +5,7 @@ export const useTreatmentData = (clientId: number | string | null, token: string
   return useQuery({
     queryKey: ['treatmentData', clientId],
     queryFn: () => getTreatmentData(clientId, token),
-    // clientId থাকলে তবেই ডাটা ফেচ হবে
+   
     enabled: !!clientId && !!token, 
   });
 };

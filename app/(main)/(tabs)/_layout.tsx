@@ -17,14 +17,14 @@ export default function TabsLayout() {
         headerShown: false,
         tabBarActiveTintColor: isDark ? '#60a5fa' : '#2563eb',
         tabBarInactiveTintColor: isDark ? '#475569' : '#94a3b8',
-        // ট্যাব বার স্বাভাবিক রাখা হয়েছে (কোনো ব্লার বা ট্রান্সপারেন্ট নয়)
+   
         tabBarStyle: { 
           height: 60,
           backgroundColor: isDark ? '#1e293b' : '#ffffff',
           borderTopColor: isDark ? '#334155' : '#e2e8f0',
         },
         
-        // শুধু হেডারে গ্লাস ইফেক্ট
+    
         headerTransparent: true,
         headerBackground: () => (
           <BlurView 

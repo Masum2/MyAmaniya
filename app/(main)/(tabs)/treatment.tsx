@@ -1,232 +1,115 @@
-import React from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  StatusBar,
-  Dimensions,
-  ActivityIndicator,
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  View, Text, ScrollView, StatusBar, Dimensions, 
+  ActivityIndicator, TouchableOpacity 
 } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView } from 'react-native-safe-area-context';
+
 import { PieChart } from 'react-native-chart-kit';
 import { useColorScheme } from 'nativewind';
+import { Ionicons } from '@expo/vector-icons';
 import CustomHeader from '../../../components/CustomHeader';
-
 import { useClientList } from '../../../hooks/useClientListData';
 import { useTreatmentData } from '../../../hooks/useTreatmentProgress';
 import { useAuthStore } from '../../../store/useAuthStore';
 
 const screenWidth = Dimensions.get('window').width;
 
+// Status colors memoized
+const getStatusColor = (status: string) => {
+  const colors: { [key: string]: string } = {
+    'discontinued': '#3b82f6', 'on hold': '#3b82f6',
+    'in progress': '#ff5c8a',
+    'accomplished': '#4ecdc4', 'successfully completed': '#4ecdc4',
+    'unsuccessful': '#ffd166'
+  };
+  return colors[status?.toLowerCase()] || '#9ca3af';
+};
+
 export default function TreatmentTab() {
   const { colorScheme } = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
-  const insets = useSafeAreaInsets();
   const { token } = useAuthStore();
+  
+  const { data: clients, isLoading: isClientsLoading } = useClientList();
+  const [selectedClientId, setSelectedClientId] = useState<number | null>(null);
 
-  const { data: clients } = useClientList();
-
-  const clientId =
-    Array.isArray(clients) && clients.length > 0 ? clients[0].id : null;
-
-  console.log('First Client ID:', clientId);
-
-  const {
-    data: treatmentData,
-    isLoading,
-    error,
-  } = useTreatmentData(2, token);
-
-  const textColor = isDarkMode ? '#FFFFFF' : '#1e293b';
-  const cardBg = isDarkMode ? '#1e293e' : '#FFFFFF';
-  const summaryBg = isDarkMode ? '#0f172a' : '#1e293b';
-
-  const chartConfig = {
-    color: (opacity = 1) =>
-      isDarkMode
-        ? `rgba(255,255,255,${opacity})`
-        : `rgba(0,0,0,${opacity})`,
-    strokeWidth: 2,
-  };
-
-  // Status wise colors
-  const getColor = (status: string) => {
-    switch (status?.toLowerCase()) {
-      case 'discontinued':
-        return '#3b82f6'; // Blue
-
-      case 'on hold':
-        return '#3b82f6'; // Blue
-
-      case 'in progress':
-        return '#ff5c8a'; // Pink
-
-      case 'accomplished':
-        return '#4ecdc4'; // Teal
-
-      case 'successfully completed':
-        return '#4ecdc4'; // Teal
-
-      case 'unsuccessful':
-        return '#ffd166'; // Yellow
-
-      default:
-        return '#9ca3af'; // Gray
+  useEffect(() => {
+    if (clients?.length > 0 && !selectedClientId) {
+      setSelectedClientId(clients[0].id);
     }
-  };
+  }, [clients]);
 
-  if (isLoading) {
-    return (
-      <View className="flex-1 justify-center items-center bg-slate-100 dark:bg-[#121212]">
-        <ActivityIndicator size="large" color="#2563eb" />
-      </View>
-    );
-  }
+  const { data: treatmentData, isLoading: isTreatmentLoading } = useTreatmentData(selectedClientId!, token);
 
-  if (!treatmentData || error) {
-    return (
-      <View className="flex-1 justify-center items-center bg-slate-100 dark:bg-[#121212]">
-        <Text style={{ color: textColor }}>
-          No data available or error occurred.
-        </Text>
-      </View>
-    );
-  }
+  // Optimized Chart Data with useMemo
+  const chartConfigs = useMemo(() => [
+    { title: 'Goal Outcome Distribution', key: 'goalOutcomeChartData' },
+    { title: 'Activity Outcome Distribution', key: 'activityOutcomeChartData' }
+  ], []);
+
+  if (isClientsLoading) return <ActivityIndicator className="flex-1" size="large" color="#2563eb" />;
 
   return (
-    <View className="flex-1 bg-slate-100 dark:bg-[#121212]">
-      <StatusBar
-        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-      />
-
+    <SafeAreaView className="flex-1 bg-slate-100 dark:bg-[#121212]">
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} />
       <CustomHeader title="Treatment Plans" />
 
-      <ScrollView
-        contentContainerStyle={{
-          paddingTop: insets.top + 90,
-          padding: 20,
-        }}
-      >
-        {/* Goal Distribution */}
-        <View
-          style={{ backgroundColor: cardBg }}
-          className="p-5 rounded-3xl mb-6 shadow-sm border border-slate-200 dark:border-slate-700"
-        >
-          <Text
-            style={{ color: textColor }}
-            className="text-base font-bold mb-4 text-center"
-          >
-            Goal Outcome Distribution
-          </Text>
-
-          <PieChart
-            data={
-              treatmentData.goalOutcomeChartData?.map((item: any) => ({
-                name: item.category,
-                population: item.value,
-                color: getColor(item.category),
-                legendFontColor: isDarkMode
-                  ? '#cbd5e1'
-                  : '#334155',
-                legendFontSize: 13,
-              })) || []
-            }
-            width={screenWidth - 70}
-            height={220}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="0"
-            absolute
-            chartConfig={chartConfig}
-          />
-        </View>
-
-        {/* Activity Distribution */}
-        <View
-          style={{ backgroundColor: cardBg }}
-          className="p-5 rounded-3xl mb-6 shadow-sm border border-slate-200 dark:border-slate-700"
-        >
-          <Text
-            style={{ color: textColor }}
-            className="text-base font-bold mb-4 text-center"
-          >
-            Activity Outcome Distribution
-          </Text>
-
-          <PieChart
-            data={
-              treatmentData.activityOutcomeChartData?.map(
-                (item: any) => ({
-                  name: item.category,
-                  population: item.value,
-                  color: getColor(item.category),
-                  legendFontColor: isDarkMode
-                    ? '#cbd5e1'
-                    : '#334155',
-                  legendFontSize: 13,
-                }),
-              ) || []
-            }
-            width={screenWidth - 70}
-            height={220}
-            accessor="population"
-            backgroundColor="transparent"
-            paddingLeft="0"
-            absolute
-            chartConfig={chartConfig}
-          />
-        </View>
-
-        {/* Summary */}
+      <ScrollView contentContainerStyle={{ paddingTop: 110, paddingBottom: 40, paddingHorizontal: 20 }}>
+        
+        {/* Client Selector */}
         <View className="mb-8">
-          {treatmentData.statusSummary?.map(
-            (sum: any, index: number) => (
-              <View
-                key={index}
-                style={{ backgroundColor: summaryBg }}
-                className="p-6 rounded-3xl mb-5 shadow-lg"
+          <Text className="text-slate-500 dark:text-slate-400 text-[10px] font-bold uppercase mb-3 tracking-widest">Select Client</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            {clients?.map((client: any) => (
+              <TouchableOpacity
+                key={client.id}
+                onPress={() => setSelectedClientId(client.id)}
+                className={`px-6 py-3 rounded-2xl mr-3 border ${selectedClientId === client.id ? 'bg-blue-600 border-blue-600' : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'}`}
               >
-                <View className="flex-row items-center justify-between mb-5">
-                  <Text className="text-lg font-bold text-white">
-                    📊 {sum.type}
-                  </Text>
-
-                  <Text className="text-slate-300">
-                    Total: {sum.total}
-                  </Text>
-                </View>
-
-                <View className="flex-row flex-wrap justify-between">
-                  {Object.entries(sum.statusCounts || {}).map(
-                    ([status, count]: any) => (
-                      <View
-                        key={status}
-                        className="w-[48%] rounded-2xl p-4 mb-3"
-                        style={{
-                          backgroundColor: `${getColor(status)}20`,
-                          borderWidth: 1,
-                          borderColor: getColor(status),
-                        }}
-                      >
-                        <Text
-                          style={{ color: getColor(status) }}
-                          className="text-xs font-bold uppercase"
-                        >
-                          {status}
-                        </Text>
-
-                        <Text className="text-white text-2xl font-bold mt-2">
-                          {count}
-                        </Text>
-                      </View>
-                    ),
-                  )}
-                </View>
-              </View>
-            ),
-          )}
+                <Text className={`font-bold ${selectedClientId === client.id ? 'text-white' : 'text-slate-600 dark:text-slate-300'}`}>
+                  {client.description}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
+
+        {isTreatmentLoading ? (
+          <ActivityIndicator className="mt-20" size="large" color="#2563eb" />
+        ) : treatmentData ? (
+          chartConfigs.map((cfg) => (
+            <View key={cfg.key} className="bg-white dark:bg-slate-900 p-6 rounded-3xl mb-6 shadow-sm border border-slate-100 dark:border-slate-800">
+              <Text className="text-slate-800 dark:text-white font-bold mb-6 text-center">{cfg.title}</Text>
+              
+              {treatmentData[cfg.key]?.length > 0 ? (
+                <PieChart
+                  data={treatmentData[cfg.key].map((item: any) => ({
+                    name: item.category,
+                    population: item.value,
+                    color: getStatusColor(item.category),
+                    legendFontColor: isDarkMode ? '#94a3b8' : '#64748b',
+                    legendFontSize: 11,
+                  }))}
+                  width={screenWidth - 80}
+                  height={200}
+                  accessor="population"
+                  backgroundColor="transparent"
+                  paddingLeft="0"
+                  chartConfig={{ color: () => isDarkMode ? '#fff' : '#000' }}
+                />
+              ) : (
+                <View className="h-40 items-center justify-center">
+                  <Ionicons name="information-circle-outline" size={40} color="#94a3b8" />
+                  <Text className="text-slate-400 mt-2 text-sm">No data available</Text>
+                </View>
+              )}
+            </View>
+          ))
+        ) : (
+          <Text className="text-center text-slate-400 mt-10">No records found.</Text>
+        )}
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }

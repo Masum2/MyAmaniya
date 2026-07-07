@@ -7,7 +7,7 @@ import { Appointment } from '../types/getAppointmentANdClient';
 export const useAppointments = (clientId?: number | string) => {
   const token = useAuthStore((state) => state.token);
   
-  return useQuery<Appointment[], Error>({ // এখানে টাইপ ডিফাইন করা হলো
+  return useQuery<Appointment[], Error>({ 
     queryKey: ['appointments', clientId],
     queryFn: () => getAppointments(clientId!, token),
     enabled: !!clientId && !!token,

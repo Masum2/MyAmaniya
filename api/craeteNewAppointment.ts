@@ -1,9 +1,10 @@
 import axios from 'axios';
 import { createAppointmentPayload } from '../types/createAppointment';
+import Constants from 'expo-constants';
 
-// apiClient যদি আগেই তৈরি থাকে, তবে সেটি ব্যবহার করুন
+
 const apiClient = axios.create({
-  baseURL: 'http://192.168.0.100:5294/beratenApi/ClientApp',
+  baseURL: `${Constants.expoConfig?.extra?.apiUrl}/beratenApi/ClientApp`,
 });
 
 

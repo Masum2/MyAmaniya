@@ -1,11 +1,12 @@
+import Constants from "expo-constants";
 
 
 // hooks/useTreatmentProgress.ts এর ভেতর
 export const getTreatmentData = async (clientId: number | string | null, token: string | null) => {
   if (!clientId || !token) return null;
   
-  const API_URL = `http://192.168.0.100:5294/beratenApi/ClientApp/GetProgressTreatmentsGoals?clientId=${clientId}`;
-  
+
+  const API_URL = `${Constants.expoConfig?.extra?.apiUrl}/beratenApi/ClientApp/GetProgressTreatmentsGoals?clientId=${clientId}`;
   const response = await fetch(API_URL, {
     method: 'GET',
     headers: {
@@ -20,6 +21,6 @@ export const getTreatmentData = async (clientId: number | string | null, token: 
   }
   
   const data = await response.json();
-  console.log("API Response Data:", data); // এখানে কি ডাটা আসছে?
+  // console.log("API Response Data:", data); 
   return data;
 };

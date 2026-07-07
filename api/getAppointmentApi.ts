@@ -1,9 +1,9 @@
+import Constants from "expo-constants";
 import { Appointment } from "../types/getAppointmentANdClient";
 
 
 export const getAppointments = async (clientId: number | string, token: string | null): Promise<Appointment[]> => {
-  const API_URL = `http://192.168.0.100:5294/beratenApi/ClientApp/GetAppointMentList?ClientId=${clientId}`;
-
+  const API_URL = `${Constants.expoConfig?.extra?.apiUrl}/beratenApi/ClientApp/GetAppointMentList?ClientId=${clientId}`;
   const response = await fetch(API_URL, {
     method: 'GET',
     headers: {
